@@ -97,7 +97,7 @@ Usage
 
 ::
 
-    usage: howdoi.py [-h] [-p POS] [-n NUM] [-a] [-l] [-c] [-C] [-j] [-v] [-e [ENGINE]] [--save] [--view] [--remove] [--empty] [QUERY ...]
+    usage: howdoi [-h] [-p POS] [-n NUM] [-a] [-l] [-c] [-x] [-C] [-j] [-v] [-e [ENGINE]] [--save] [--view] [--remove] [--empty] [QUERY ...]
 
     instant coding answers via the command line
 
@@ -111,6 +111,7 @@ Usage
       -a, --all             display the full text of the answer
       -l, --link            display only the answer link
       -c, --color           enable colorized output
+      -x, --explain         explain how answer was chosen
       -C, --clear-cache     clear the cache
       -j, --json            return answers in raw json format
       -v, --version         displays the current version of howdoi
@@ -149,6 +150,19 @@ And then to run it from the command line simply type:
 
     $ h format date bash
 
+You can also search other `StackExchange properties <https://stackexchange.com/sites#traffic>`_ for answers:
+
+::
+
+    HOWDOI_URL=cooking.stackexchange.com howdoi make pesto
+
+or as an alias:
+
+::
+
+    alias hcook='function hcook(){ HOWDOI_URL=cooking.stackexchange.com howdoi $* ; }; hcook'
+    hcook make pesto
+
 Other useful aliases:
 
 ::
@@ -165,6 +179,7 @@ Contributors
 -  Chris Nguyen (`@chrisngyn <https://github.com/chrisngyn>`_)
 -  Shageldi Ovezov (`@ovezovs <https://github.com/chrisngyn>`_)
 -  Mwiza Simbeye (`@mwizasimbeye11 <https://github.com/mwizasimbeye11>`_)
+-  Shantanu Verma (`@SaurusXI <https://github.com/SaurusXI>`_)
 -  And `more! <https://github.com/gleitz/howdoi/graphs/contributors>`_
 
 Notes
@@ -188,6 +203,7 @@ Development
 
 -  Checkout the repo
 -  Run ``python -m howdoi QUERY`` (if you try running ``python howdoi/howdoi.py`` you might get ``ValueError: Attempted relative import in non-package``).
+-  When you're ready to open a PR be sure to run ``python setup.py lint`` to make sure your code passes the checks.
 
 If you would like to use howdoi from within a python script, just pass your query to `howdoi.howdoi()`:
 ::

@@ -176,7 +176,8 @@ def _get_result(url):
     try:
         resp = howdoi_session.get(url, headers={'User-Agent': _random_choice(USER_AGENTS)},
                                   proxies=get_proxies(),
-                                  verify=VERIFY_SSL_CERTIFICATE)
+                                  verify=VERIFY_SSL_CERTIFICATE,
+                                  cookies={'CONSENT': 'YES+US.en+20170717-00-0'})
         resp.raise_for_status()
         return resp.text
     except requests.exceptions.SSLError as error:
@@ -225,7 +226,7 @@ def _clean_google_link(link):
 
 def _extract_links_from_google(query_object):
     html = query_object.html()
-    link_pattern = re.compile(r"https?://*stackoverflow.com/questions/[0-9]*/[a-z0-9-]*")
+    link_pattern = re.compile(fr"https?://{URL}/questions/[0-9]*/[a-z0-9-]*")
     links = link_pattern.findall(html)
     links = [_clean_google_link(link) for link in links]
     return links
@@ -273,6 +274,7 @@ def _get_links(query):
     try:
         result = _get_result(search_url)
     except requests.HTTPError:
+        logging.info('Received HTTPError')
         result = None
     if not result or _is_blocked(result):
         logging.error('%sUnable to find an answer because the search engine temporarily blocked the request. '
@@ -474,7 +476,7 @@ def _is_help_query(query):
 
 def _format_answers(args, res):
     if "error" in res:
-        return res["error"]
+        return f'ERROR: {RED}{res["error"]}{END_FORMAT}'
 
     if args["json_output"]:
         return json.dumps(res)
@@ -587,7 +589,13 @@ def howdoi(raw_query):
     else:
         args = raw_query
 
-    os.environ['HOWDOI_SEARCH_ENGINE'] = args['search_engine']
+    os.environ['HOWDOI_SEARCH_ENGINE'] = args['search_engine'] or os.getenv('HOWDOI_SEARCH_ENGINE') or 'google'
+    search_engine = os.getenv('HOWDOI_SEARCH_ENGINE')
+    if search_engine not in SUPPORTED_SEARCH_ENGINES:
+        supported_search_engines = ', '.join(SUPPORTED_SEARCH_ENGINES)
+        message = f'Unsupported engine {search_engine}. The supported engines are: {supported_search_engines}'
+        res = {'error': message}
+        return _parse_cmd(args, res)
 
     args['query'] = ' '.join(args['query']).replace('?', '')
     cache_key = _get_cache_key(args)
@@ -646,7 +654,7 @@ def get_parser():
     parser.add_argument('-v', '--version', help='displays the current version of howdoi',
                         action='store_true')
     parser.add_argument('-e', '--engine', help='search engine for this query (google, bing, duckduckgo)',
-                        dest='search_engine', nargs="?", default='google', metavar='ENGINE')
+                        dest='search_engine', nargs="?", metavar='ENGINE')
     parser.add_argument('--save', '--stash', help='stash a howdoi answer',
                         action='store_true')
     parser.add_argument('--view', help='view your stash',
@@ -717,7 +725,7 @@ def perform_sanity_check():
     cache = NullCache()
 
     exit_code = 0
-    for engine in ('google', 'bing', 'duckduckgo'):
+    for engine in ['google']:  # 'bing' and 'duckduckgo' throw various block errors
         print('Checking {}...'.format(engine))
         try:
             _sanity_check(engine)
@@ -776,10 +784,6 @@ def command_line_runner():  # pylint: disable=too-many-return-statements,too-man
 
     if os.getenv('HOWDOI_COLORIZE'):
         args['color'] = True
-
-    if not args['search_engine'] in SUPPORTED_SEARCH_ENGINES:
-        logging.error('Unsupported engine.\nThe supported engines are: %s' ', '.join(SUPPORTED_SEARCH_ENGINES))
-        return
 
     utf8_result = howdoi(args).encode('utf-8', 'ignore')
     if sys.version < '3':
